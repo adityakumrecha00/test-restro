@@ -1,4 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
+const http = require("http");
 
 // ════════════════════════════════════════════════════
 //  CONFIG
@@ -703,6 +704,23 @@ bot.on("callback_query", async (query) => {
 if (!useWebhook) {
   bot.on("polling_error", (err) => console.error("Polling error:", err.message));
 }
+
+// Render (Web Service) expects the process to bind to a port.
+// Keep a lightweight HTTP server open for health checks.
+const PORT = Number(process.env.PORT) || 3000;
+http
+  .createServer((req, res) => {
+    if (req.url === "/health" || req.url === "/") {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("ok");
+      return;
+    }
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("not found");
+  })
+  .listen(PORT, "0.0.0.0", () => {
+    console.log(`🌐 Health server listening on port ${PORT}`);
+  });
 
 console.log(`✅ ${RESTAURANT} Bot running (${useWebhook ? "webhook" : "polling"})...`);
 console.log(`🔐 Owner password set: ${OWNER_PASSWORD !== "admin123" ? "✅ Custom" : "⚠️  Default (set OWNER_PASSWORD env var!)"}`);
